@@ -1,31 +1,74 @@
-fetch("http://localhost:3000/db", {method: 'get'})
-    .then((response: any) => response.json())
-    .then((myJSONData: object) =>  workWithData(<objectInterface>myJSONData));
-)
-function ascending(naturalSorting: object): void{
-    naturalSorting.sort((a: object, b: object) => a.uri.localeCompare(b.uri, undefined, { numeric: true, sensitivity: 'base' }));
+interface companiesAndUsersInterface {
+    users: usersInterface,
+    companies: companiesInterface;
+}
+
+const fetchWithTimeout = (timeout: number, promise: any) => {
+    return new Promise(function(resolve, reject) {
+        setTimeout(() => {
+            reject(new Error('Request Timed Out :('))
+        }, timeout);
+        promise.then(
+            (response: any) => {
+                console.log(response)
+                const usersAndCompaniesData: companiesAndUsersInterface = resolve(response.json());
+                return usersAndCompaniesData;
+            }
+    })
+}
+
+fetchWithTimeout(5000, fetch("http://localhost:3000/db"))
+    .then(usersAndCompaniesData => workWithData(usersAndCompaniesData))
+    .catch(timeOutError => console.log(timeOutError))
+
+/*
+const fetchAsync = async () => {
+    const response = await fetch("http://localhost:3000/db");
+    console.log(response);
+    const usersAndCompaniesData: companiesAndUsersInterface = await response.json();
+    return usersAndCompaniesData;
+}
+fetchAsync()
+    .then(usersAndCompaniesData => workWithData(usersAndCompaniesData))
+    .catch(err => console.log('Error: ', err))
+*/
+function ascending(naturalSorting: usersInterface): void{
+    naturalSorting.sort((a: usersInterface, b: usersInterface) => a.uri.localeCompare(b.uri, undefined, { numeric: true, sensitivity: 'base' }));
 }
 //I wanna change /user/1 'string' into 1 'number'
 function onlyNumber(stringElement: string): number{
     const result: RegExpMatchArray = stringElement.match(/\d+/g);
     return parseInt(result, 10);
 }
-interface objectInterface {
-    users: object,
-    companies: object;
+interface usersInterface {
+    name: string;
+    uri: string;
+    email: string;
+    uris: urisInterface;
+    filter(param : (item) => boolean) : usersInterface;
+    sort(param : (a : usersInterface, b : usersInterface) => number) : void;
 }
-function workWithData(companiesAndUsers: objectInterface) {
-    const allUsersObj: object = companiesAndUsers.users;
-    const allCompaniesObj: object = companiesAndUsers.companies;
+interface urisInterface {
+    company: string
+}
+interface companiesInterface {
+    name: string;
+    uri: string;
+    forEach(param : (company) => void, object : object) : void;
+}
+function workWithData(companiesAndUsers: companiesAndUsersInterface) {
+    const allCompaniesObj: companiesInterface = <companiesInterface>companiesAndUsers.companies;
+    const allUsersObj: usersInterface = companiesAndUsers.users;
     ascending(allUsersObj);
     let usersSortedByCompany: string[] = [];
-    // @ts-ignore
+    //Alternatively, we can replace forEach with for(const company of Object.values(allCompaniesObj))
     allCompaniesObj.forEach(company => {
-        const companyName: string[] = [company.name];
-        const usersWithTheSameCompany: object = allUsersObj.filter(item => company.uri === item.uris.company);
-        companyName.push(usersWithTheSameCompany); //Object with Users data pushed to individual Company
-        usersSortedByCompany.push(companyName); //Without this line, companyName isn't a function
-    },
+            const companyName : string[] = [company.name];
+            const usersWithTheSameCompany : usersInterface = allUsersObj.filter(item => company.uri === item.uris.company);
+            companyName.push(usersWithTheSameCompany);//Object with Users data pushed to individual Company
+            usersSortedByCompany.push(companyName); //Without this line, companyName isn't a function
+        },
+
     usersSortedByCompany.reduce((accumulator: object, currentItem: string, index: number) => {
         accumulator[index] = currentItem;
         return accumulator;
@@ -33,9 +76,9 @@ function workWithData(companiesAndUsers: objectInterface) {
     drawTable(usersSortedByCompany);
 }
 
-function drawTable(Data: object): void {
+function drawTable(Data: object | string): void {
     for (const value of Object.values(Data)) {  //value[0] is a name of Company.
-        const userData: object = value[1];      //value[1] is an object with all Users data for value[0].
+        const userData: usersInterface = value[1]; //value[1] is an object with all Users data for value[0].
         const userName: string[] = [];
         const emails: string[] = [];            //I pushed all data into new arrays.
         const usersPopulation: string[] = [];

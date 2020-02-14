@@ -1,6 +1,29 @@
-fetch("http://localhost:3000/db", { method: 'get' })
-    .then(function (response) { return response.json(); })
-    .then(function (myJSONData) { return workWithData(myJSONData); });
+var fetchWithTimeout = function (timeout, promise) {
+    return new Promise(function (resolve, reject) {
+        setTimeout(function () {
+            reject(new Error('Request Timed Out :('));
+        }, timeout);
+        promise.then(function (response) {
+            console.log(response);
+            var usersAndCompaniesData = resolve(response.json());
+            return usersAndCompaniesData;
+        });
+    });
+};
+fetchWithTimeout(5000, fetch("http://localhost:3000/db"))
+    .then(function (usersAndCompaniesData) { return workWithData(usersAndCompaniesData); })
+    .catch(function (timeOutError) { return console.log(timeOutError); });
+/*
+const fetchAsync = async () => {
+    const response = await fetch("http://localhost:3000/db");
+    console.log(response);
+    const usersAndCompaniesData: companiesAndUsersInterface = await response.json();
+    return usersAndCompaniesData;
+}
+fetchAsync()
+    .then(usersAndCompaniesData => workWithData(usersAndCompaniesData))
+    .catch(err => console.log('Error: ', err))
+*/
 function ascending(naturalSorting) {
     naturalSorting.sort(function (a, b) { return a.uri.localeCompare(b.uri, undefined, { numeric: true, sensitivity: 'base' }); });
 }
@@ -10,11 +33,11 @@ function onlyNumber(stringElement) {
     return parseInt(result, 10);
 }
 function workWithData(companiesAndUsers) {
-    var allUsersObj = companiesAndUsers.users;
     var allCompaniesObj = companiesAndUsers.companies;
+    var allUsersObj = companiesAndUsers.users;
     ascending(allUsersObj);
     var usersSortedByCompany = [];
-    // @ts-ignore
+    //Alternatively, we can replace forEach with for(const company of Object.values(allCompaniesObj))
     allCompaniesObj.forEach(function (company) {
         var companyName = [company.name];
         var usersWithTheSameCompany = allUsersObj.filter(function (item) { return company.uri === item.uris.company; });
